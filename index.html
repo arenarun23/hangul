@@ -302,7 +302,12 @@ $('bWrite').onclick = async ()=>{
 
 // 인식 결과 처리: 따라 쓰기 중이면 정답 확인, 아니면 사전에 있는 후보 우선
 const NOT_MSG = '글자를 알아보기 어려워요. 다시 써 주세요.';
-function notRecognized(){ setStatus(NOT_MSG); $('cands').innerHTML = ''; say(NOT_MSG); }
+function notRecognized(){
+  setStatus(NOT_MSG); $('cands').innerHTML = '';
+  const last = strokes[strokes.length - 1], n = strokes.length;
+  // 안내가 끝나면 쓴 글씨를 자동으로 지움 (그 사이 새로 쓰기 시작했으면 지우지 않음)
+  say(NOT_MSG, ()=>{ if (strokes.length === n && strokes[strokes.length - 1] === last && !drawing && n) clearPad(); });
+}
 function handleResult(c){
   if (!c.length) return notRecognized();
   if (target){
@@ -409,9 +414,11 @@ function spoken(t){
   const w = ALL.find(x=>x[0] === cs[0] && x.length > 1);
   return w ? `${t}. ${w}의 ${t}` : `${t}. ${t}`;
 }
-function say(text){
-  lastSay = text || lastSay; if (!lastSay || !('speechSynthesis' in window)) return;
-  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(lastSay); u.lang = 'ko-KR'; const kv = koVoice(); if (kv) u.voice = kv; u.rate = +$('rate').value; u.volume = +$('vol').value; u.onend = u.onerror = ()=>{ muteUntil = Date.now() + 900; }; speechSynthesis.speak(u); }catch(e){}
+function say(text, then){
+  let fin = false; const done = ()=>{ if (!fin){ fin = true; then && then(); } };
+  lastSay = text || lastSay; if (!lastSay || !('speechSynthesis' in window)){ then && setTimeout(done, 1500); return; }
+  if (then) setTimeout(done, 3000 + lastSay.length * 450);   // 읽기가 멈추지 않아도 지우기는 진행
+  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(lastSay); u.lang = 'ko-KR'; const kv = koVoice(); if (kv) u.voice = kv; u.rate = +$('rate').value; u.volume = +$('vol').value; u.onend = u.onerror = ()=>{ muteUntil = Date.now() + 900; done(); }; speechSynthesis.speak(u); }catch(e){}
 }
 function showVox(){ $('rateV').textContent = (+$('rate').value).toFixed(1); $('volV').textContent = (+$('vol').value).toFixed(1); }
 ['rate','vol'].forEach(id=>{ $(id).addEventListener('input', showVox); $(id).addEventListener('change', ()=>say(lastSay || '안녕')); });
