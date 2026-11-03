@@ -365,14 +365,23 @@ function lookup(text, keepTarget){
     ${near.length ? `<div class="tag">혹시 이 낱말인가요?</div><div class="gchips">${near.map(w=>`<button class="gc" data-w="${esc(w)}">${esc(w)}<i>${PIC[w]}</i></button>`).join('')}</div>` : ''}
     ${used.length ? `<div class="tag" style="margin-top:8px">같은 글자가 쓰인 낱말</div><ul class="cols">${used.map(w=>`<li>${PIC[w]} ${esc(w)}</li>`).join('')}</ul>` : ''}`;
   $('info').querySelectorAll('.gc').forEach(b=> b.onclick = ()=>{ clearPad(); practice(b.dataset.w); });
-  say(chars.length === 1 && isJamo(chars[0]) ? NAME[chars[0]] : shown(t));
+  say(chars.length === 1 && isJamo(chars[0]) ? NAME[chars[0]] : spoken(t));
 }
 
 /* ---------------- 읽어주기 (기기 기본 목소리) ---------------- */
 let lastSay = '';
+// 한국어 목소리를 직접 고른다 (기본 목소리가 한국어가 아니면 '바'가 '따'처럼 들릴 수 있음)
+function koVoice(){ const v = ('speechSynthesis' in window) ? speechSynthesis.getVoices() : []; return v.find(x=>/^ko[-_]KR$/i.test(x.lang) && x.localService) || v.find(x=>/^ko/i.test(x.lang)) || null; }
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = ()=>{};
+// 글자 하나는 엔진이 잘못 읽기 쉬워서 낱말 예시를 붙여 읽어 준다 (바 → "바. 바나나의 바")
+function spoken(t){
+  const cs = [...t]; if (cs.length !== 1 || !isSyl(cs[0])) return shown(t);
+  const w = ALL.find(x=>x[0] === cs[0] && x.length > 1);
+  return w ? `${t}. ${w}의 ${t}` : `${t}. ${t}`;
+}
 function say(text){
   lastSay = text || lastSay; if (!lastSay || !('speechSynthesis' in window)) return;
-  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(lastSay); u.lang = 'ko-KR'; u.rate = +$('rate').value; u.volume = +$('vol').value; u.onend = u.onerror = ()=>{ muteUntil = Date.now() + 900; }; speechSynthesis.speak(u); }catch(e){}
+  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(lastSay); u.lang = 'ko-KR'; const kv = koVoice(); if (kv) u.voice = kv; u.rate = +$('rate').value; u.volume = +$('vol').value; u.onend = u.onerror = ()=>{ muteUntil = Date.now() + 900; }; speechSynthesis.speak(u); }catch(e){}
 }
 function showVox(){ $('rateV').textContent = (+$('rate').value).toFixed(1); $('volV').textContent = (+$('vol').value).toFixed(1); }
 ['rate','vol'].forEach(id=>{ $(id).addEventListener('input', showVox); $(id).addEventListener('change', ()=>say(lastSay || '안녕')); });
