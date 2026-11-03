@@ -306,10 +306,10 @@ function notRecognized(){ setStatus(NOT_MSG); $('cands').innerHTML = ''; say(NOT
 function handleResult(c){
   if (!c.length) return notRecognized();
   if (target){
-    if (c.includes(target)){ return success(target); }
+    if (c.slice(0,3).includes(target)){ return success(target); }   // 상위 3개 안에 있으면 정답
     setStatus(`인식: ${c[0]} · 「${shown(target)}」 모양을 다시 따라 써 볼까요?`); lookup(c[0], true); return;
   }
-  const pick = c.find(x=>PIC[x]) || c[0];
+  const pick = c[0];   // 인식 엔진의 첫 번째 결과를 그대로 사용 (다른 후보는 칸 안의 글자 버튼으로 고르기)
   setStatus(`인식: ${pick}`); lookup(pick);
 }
 function success(w){
