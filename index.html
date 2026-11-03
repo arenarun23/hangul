@@ -58,6 +58,10 @@
   .vox label{display:flex;align-items:center;gap:6px;white-space:nowrap}
   .vox input{width:130px;accent-color:var(--accent2);height:28px}
   .vox select{font:inherit;font-size:16px;max-width:190px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:3px 6px}
+  #inks{display:flex;gap:6px;align-items:center}
+  .ink{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);font:inherit;font-size:12px;color:var(--ink);background:var(--panel);padding:0;cursor:pointer}
+  .ink.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+  #inks .ink[data-k=auto]{width:auto;border-radius:14px;padding:0 8px}
   .vox b{min-width:2.2em;color:var(--ink)}
   #vtoggle{display:none;position:absolute;top:6px;right:8px;z-index:3;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;width:36px;height:36px;font-size:18px;cursor:pointer}
   .info{overflow:auto}
@@ -147,6 +151,7 @@
     <div class="vox">
       <label>🐢 속도 <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="0.8"><b id="rateV">0.8</b></label>
       <label>🗣 목소리 <select id="voice"><option value="">자동</option></select></label>
+      <label>✏️ 글씨 색 <span id="inks"><button data-k="auto" class="ink on">자동</button><button data-k="#ffffff" class="ink" style="background:#fff"></button><button data-k="#1c2030" class="ink" style="background:#1c2030"></button><button data-k="#ffd54a" class="ink" style="background:#ffd54a"></button><button data-k="#ff6b6b" class="ink" style="background:#ff6b6b"></button><button data-k="#4cd9a0" class="ink" style="background:#4cd9a0"></button></span></label>
       <label>🔈 크기 <input type="range" id="vol" min="0.2" max="1" step="0.1" value="1"><b id="volV">1.0</b></label>
     </div>
   </section>
@@ -198,8 +203,10 @@ setAppH(); addEventListener('resize', setAppH); addEventListener('orientationcha
 window.visualViewport && visualViewport.addEventListener('resize', setAppH);
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function bgDark(){ if (darkMQ.matches) return true; const m = (getComputedStyle($('pad')).backgroundColor||'').match(/\d+(\.\d+)?/g); if (!m || m.length < 3) return false; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) < 128; }
-const inkColor = () => bgDark() ? '#ffffff' : '#1c2030';
-const haloColor = () => bgDark() ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)';   // 어두운 배경엔 흰 글씨(+검은 테두리), 밝은 배경엔 검은 글씨
+let inkPick = 'auto';   // 글씨 색 직접 고르기 (저장 안 함)
+const lum = c => { const m = c.replace('#','').match(/../g).map(h=>parseInt(h,16)); return 0.299*m[0] + 0.587*m[1] + 0.114*m[2]; };
+const inkColor = () => inkPick !== 'auto' ? inkPick : (bgDark() ? '#ffffff' : '#1c2030');
+const haloColor = () => { const k = inkColor(); return lum(k) > 128 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)'; };   // 글씨와 반대색 테두리
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>redraw());
 function fit(){ const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; cv.width = r.width*d; cv.height = r.height*d; ctx.setTransform(d,0,0,d,0,0); redraw(); fitGuide(); }
 function redraw(){
@@ -410,6 +417,7 @@ function showVox(){ $('rateV').textContent = (+$('rate').value).toFixed(1); $('v
 ['rate','vol'].forEach(id=>{ $(id).addEventListener('input', showVox); $(id).addEventListener('change', ()=>say(lastSay || '안녕')); });
 showVox();
 $('voice').addEventListener('change', ()=>{ pickedVoice = $('voice').value; say('바. 바나나의 바'); });
+document.querySelectorAll('#inks .ink').forEach(b=> b.onclick = ()=>{ inkPick = b.dataset.k; document.querySelectorAll('#inks .ink').forEach(x=>x.classList.toggle('on', x===b)); redraw(); });
 document.querySelector('.hrow').addEventListener('click', ()=>say());
 $('listen').addEventListener('click', ()=>say());
 $('vtoggle').addEventListener('click', ()=>{ document.querySelector('.hangul').classList.toggle('showvox'); setTimeout(fitBig, 0); });
