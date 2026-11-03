@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
 <style>
   :root{color-scheme:light dark;--bg:#f3f6fc;--panel:#ffffff;--ink:#1f2430;--mute:#6b7488;--line:#d3dbec;--accent:#2d6cdf;--accent2:#1f9d6b;--guide:#dbe5fa}
-  @media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1b1f29;--ink:#eef1f8;--mute:#9aa3b8;--line:#343b4d;--accent:#7fb0ff;--accent2:#6fd1a6;--guide:#2b3550}}
+  @media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1b1f29;--ink:#eef1f8;--mute:#9aa3b8;--line:#343b4d;--accent:#7fb0ff;--accent2:#6fd1a6;--guide:#4a5b86}}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overscroll-behavior:none}
   body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;font-weight:700;padding:12px}
@@ -26,6 +26,9 @@
   #pad,canvas{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   #hint{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);pointer-events:none;font-size:22px;text-align:center;padding:0 10px}
   .cands{display:flex;gap:6px;margin-top:10px;min-height:42px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+  #cands{position:absolute;left:6px;right:6px;bottom:6px;margin:0;min-height:0;z-index:2}
+  #cands:empty{display:none}
+  #cands .chip{background:var(--panel)}
   .chip{flex:none;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-size:21px;cursor:pointer}
   .chip:hover{border-color:var(--accent)}
   .bar{display:flex;gap:8px;margin-top:10px}
@@ -47,7 +50,9 @@
   #pic:empty{display:none}
   #reading{font-size:30px;margin-top:6px}
   #stars{font-size:26px;min-height:30px;letter-spacing:2px}
-  #level .seg{font-size:20px;padding:3px 12px}
+  #level,#cats{display:flex;gap:6px;flex:none}
+  .vsep{color:var(--line)}
+  #level .seg{font-size:19px;padding:3px 10px}
   #listen{font-size:18px;color:var(--mute);margin-top:2px;cursor:pointer}
   .vox{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:18px;color:var(--mute)}
   .vox label{display:flex;align-items:center;gap:6px;white-space:nowrap}
@@ -75,16 +80,18 @@
   @media (max-height:800px){ #listen{display:none} }
   @media (max-width:900px){
     body{padding:8px;overflow:hidden}
-    .app{height:calc(var(--appH,100dvh) - 16px);grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,55fr) minmax(0,25fr) minmax(0,20fr);gap:8px}
-    .left{grid-row:auto}
-  }
-  @media (max-width:900px) and (max-height:700px){
+    .app{height:calc(var(--appH,100dvh) - 16px);grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,56fr) minmax(0,23fr) minmax(0,21fr);gap:6px}
     #vtoggle{display:block}
     .hangul:not(.showvox) .vox{display:none}
     .hangul.showvox .vox{position:absolute;left:8px;right:52px;top:6px;z-index:3;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 8px;margin:0}
-    .app{grid-template-rows:minmax(0,54fr) minmax(0,26fr) minmax(0,20fr)}
+    .mode{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-top:6px}
+    #stars{font-size:20px;min-height:24px}
+    .left{grid-row:auto}
+  }
+  @media (max-width:900px) and (max-height:700px){
+    .app{grid-template-rows:minmax(0,56fr) minmax(0,23fr) minmax(0,21fr)}
     .cands{min-height:34px}
-    .left button.btn{padding:7px 2px}
+    .left button.btn{padding:6px 2px}
     .left .mode{margin-top:4px}
   }
   @media (max-width:600px), (max-height:520px){
@@ -97,8 +104,12 @@
     #listen{display:none}
     .hangul{justify-content:flex-start;overflow:hidden}
     .bar{margin-top:8px;gap:6px}
-    .mode{margin-top:6px;gap:4px;font-size:13px}
+    .mode{margin-top:5px;gap:4px;font-size:13px}
     .mode .seg{font-size:15px;padding:1px 7px}
+    #level .seg{font-size:15px;padding:1px 7px}
+    .cands{min-height:32px;margin-top:5px}
+    .bar{margin-top:6px}
+    #bRec{font-size:26px}
     .left{position:relative}
     .left h2{display:none}
     #status{position:absolute;top:12px;left:16px;right:16px;z-index:2;pointer-events:none;font-size:14px;min-height:0;margin:0;padding:1px 8px;border-radius:8px;background:var(--panel);opacity:.92;width:fit-content;max-width:calc(100% - 32px)}
@@ -117,11 +128,9 @@
 <div class="app">
   <section class="panel left">
     <h2>필기 · 음성 입력</h2>
-    <div id="pad"><div id="guide"></div><canvas id="cv"></canvas><div id="hint">여기에 한글을 써 보세요 (예: 가, 학교)</div></div>
-    <div class="cands" id="cands"></div>
+    <div id="pad"><div id="guide"></div><canvas id="cv"></canvas><div id="hint">여기에 한글을 써 보세요 (예: 가, 학교)</div><div class="cands" id="cands"></div></div>
     <div id="status"></div>
-    <div class="mode" id="level"><span>대상</span><button class="seg on" data-l="kid">🧒 유아</button><button class="seg" data-l="school">🎒 1·2학년</button></div>
-    <div class="mode" id="cats"><span>따라 쓰기</span></div>
+    <div class="mode" id="modebar"><span id="level"><button class="seg on" data-l="kid">🧒 유아</button><button class="seg" data-l="school">🎒 1·2학년</button></span><span class="vsep">|</span><span id="cats"></span></div>
     <div class="bar">
       <button class="btn" id="bWrite">✍️ 필기</button>
       <button class="btn" id="bRec" title="말하기 (누르면 듣고, 다시 누르면 멈춰요)">🎤</button>
@@ -188,17 +197,23 @@ function setAppH(){ document.documentElement.style.setProperty('--appH', Math.ro
 setAppH(); addEventListener('resize', setAppH); addEventListener('orientationchange', setAppH);
 window.visualViewport && visualViewport.addEventListener('resize', setAppH);
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
-const inkColor = () => darkMQ.matches ? '#ffffff' : '#1c2030';
+function bgDark(){ if (darkMQ.matches) return true; const m = (getComputedStyle($('pad')).backgroundColor||'').match(/\d+(\.\d+)?/g); if (!m || m.length < 3) return false; return (0.299*m[0] + 0.587*m[1] + 0.114*m[2]) < 128; }
+const inkColor = () => bgDark() ? '#ffffff' : '#1c2030';
+const haloColor = () => bgDark() ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)';   // 어두운 배경엔 흰 글씨(+검은 테두리), 밝은 배경엔 검은 글씨
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>redraw());
 function fit(){ const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; cv.width = r.width*d; cv.height = r.height*d; ctx.setTransform(d,0,0,d,0,0); redraw(); fitGuide(); }
 function redraw(){
   ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.restore();
-  ctx.lineWidth = level === 'kid' ? 9 : 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = inkColor();
-  for (const s of strokes){ ctx.beginPath(); s[0].forEach((x,i)=> i ? ctx.lineTo(x,s[1][i]) : ctx.moveTo(x,s[1][i])); if (s[0].length===1) ctx.lineTo(s[0][0]+.1,s[1][0]); ctx.stroke(); }
+  const w = level === 'kid' ? 9 : 6, ink = inkColor(), halo = haloColor();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const [col, lw] of [[halo, w + 4], [ink, w]]){
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    for (const s of strokes){ ctx.beginPath(); s[0].forEach((x,i)=> i ? ctx.lineTo(x,s[1][i]) : ctx.moveTo(x,s[1][i])); if (s[0].length===1) ctx.lineTo(s[0][0]+.1,s[1][0]); ctx.stroke(); }
+  }
 }
 let lastPad = '';
 function fitIfChanged(){ const r = cv.getBoundingClientRect(), k = Math.round(r.width)+'x'+Math.round(r.height)+'@'+(devicePixelRatio||1); if (k !== lastPad){ lastPad = k; fit(); } }
-addEventListener('resize', fitIfChanged); new ResizeObserver(fitIfChanged).observe($('pad')); fitIfChanged();
+addEventListener('resize', fitIfChanged); addEventListener('pointerdown', ()=>{}, {passive:true}); new ResizeObserver(fitIfChanged).observe($('pad')); fitIfChanged();
 
 const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 let autoT = null;
@@ -231,7 +246,7 @@ const KID_CATS = ['자모','동물','먹거리','탈것·물건','몸·자연'],
 const CAT_LABEL = {'자모':'ㄱㄴㄷ','동물':'🐶 동물','먹거리':'🍎 먹거리','탈것·물건':'🚗 탈것','몸·자연':'🌳 몸·자연','학교·가족':'🏫 학교·가족','문장':'💬 문장'};
 const listFor = c => c === '자모' ? (level === 'kid' ? [...J_BASIC_C, ...J_BASIC_V] : [...J_BASIC_C, ...J_BASIC_V, ...J_MORE]) : (CATS[c]||[]).filter(w=> level === 'school' || easy(w));
 function renderCats(){
-  const box = $('cats'); box.innerHTML = '<span>따라 쓰기</span>';
+  const box = $('cats'); box.innerHTML = '';
   (level === 'kid' ? KID_CATS : SCH_CATS).forEach(c=>{ const b = document.createElement('button'); b.className = 'seg'; b.dataset.c = c; b.textContent = CAT_LABEL[c]; b.onclick = ()=>{ box.querySelectorAll('.seg').forEach(x=>x.classList.toggle('on', x===b)); showCat(c); }; box.appendChild(b); });
 }
 function intro(){
